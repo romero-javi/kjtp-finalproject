@@ -1,6 +1,6 @@
 package com.javi.kjtpfinalproject.shared.utils;
 
-import com.javi.kjtpfinalproject.shared.exceptions.InvalidUUID;
+import com.javi.kjtpfinalproject.shared.exceptions.InvalidDataException;
 
 import java.util.UUID;
 
@@ -13,7 +13,7 @@ public class UUIDValidator {
             UUID.fromString(uuid);
             return true;
         } catch (IllegalArgumentException e) {
-            throw new InvalidUUID("Invalid UUID sent in the request");
+            throw new InvalidDataException("Invalid UUID: '%s'".formatted(uuid));
         }
     }
 }

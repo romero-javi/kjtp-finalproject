@@ -1,29 +1,28 @@
 package com.javi.kjtpfinalproject.shared.exceptions;
 
-import com.javi.kjtpfinalproject.shared.dto.ErrorResponse;
+import com.javi.kjtpfinalproject.dto.ErrorResponseDTO;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
-    // Handles no valid data
+    // Handles no valid fields
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<Map<String, Object>> handleBindingErrors(MethodArgumentNotValidException exception) {
         Map<String, Object> errorMap = new LinkedHashMap<>();
         Map<String, Object> fields = new HashMap<>();
         errorMap.put("timestamp", LocalDateTime.now());
         errorMap.put("status", 400);
-        errorMap.put("error", "The are invalid fields");
+        errorMap.put("error", "Invalid data");
+        errorMap.put("reason", "You have invalid fields in your request body");
         errorMap.put("fields", fields);
 
         exception.getFieldErrors().forEach(
@@ -34,26 +33,54 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(NotFoundException.class)
-    ResponseEntity<ErrorResponse> handleResourceNotFound(NotFoundException exception) {
+    ResponseEntity<ErrorResponseDTO> handleResourceNotFound(NotFoundException exception) {
         return new ResponseEntity<>(
-                ErrorResponse.builder()
+                ErrorResponseDTO.builder()
                         .timestamp(LocalDateTime.now())
                         .statusCode(404)
-                        .error(exception.getMessage())
+                        .error("Not found")
+                        .reason(exception.getMessage())
                         .build(),
                 HttpStatus.NOT_FOUND
         );
     }
 
     @ExceptionHandler(DuplicatedResourceException.class)
-    ResponseEntity<ErrorResponse> handleResourceNotFound(DuplicatedResourceException exception) {
+    ResponseEntity<ErrorResponseDTO> handleDuplicatedResource(DuplicatedResourceException exception) {
         return new ResponseEntity<>(
-                ErrorResponse.builder()
+                ErrorResponseDTO.builder()
                         .timestamp(LocalDateTime.now())
                         .statusCode(409)
-                        .error(exception.getMessage())
+                        .error("Duplicate resource")
+                        .reason(exception.getMessage())
                         .build(),
                 HttpStatus.CONFLICT
+        );
+    }
+
+    @ExceptionHandler(InvalidDataException.class)
+    ResponseEntity<ErrorResponseDTO> handleInvalidData(InvalidDataException exception) {
+        return new ResponseEntity<>(
+                ErrorResponseDTO.builder()
+                        .timestamp(LocalDateTime.now())
+                        .statusCode(400)
+                        .error("Invalid data")
+                        .reason(exception.getMessage())
+                        .build(),
+                HttpStatus.BAD_REQUEST
+        );
+    }
+
+    @ExceptionHandler(NotSupportedException.class)
+    ResponseEntity<ErrorResponseDTO> handleNoSupported(NotSupportedException exception) {
+        return new ResponseEntity<>(
+                ErrorResponseDTO.builder()
+                        .timestamp(LocalDateTime.now())
+                        .statusCode(400)
+                        .error("Not Supported")
+                        .reason(exception.getMessage())
+                        .build(),
+                HttpStatus.BAD_REQUEST
         );
     }
 }

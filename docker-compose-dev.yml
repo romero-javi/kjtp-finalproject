@@ -18,8 +18,8 @@ services:
 #      - KEYCLOAK_ADMIN_PASSWORD=admin
 #      - DATABASE_HOST=kjtp-app-db
 #      - DATABASE_NAME=kjtp-admin
-#      - DATABASE_USER=873264ygy!@E
-#      - DATABASE_PASSWORD=
+#      - DATABASE_USER=kjtp-admin
+#      - DATABASE_PASSWORD=873264ygy!@E
 #    restart: always
 #    networks:
 #      - kjtp-project-network

@@ -8,8 +8,8 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
+import org.hibernate.type.SqlTypes;
 
-import java.sql.Types;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -20,13 +20,17 @@ import java.util.UUID;
 @Entity
 public class UserAddress {
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(length = 36, columnDefinition = "varchar(36)", updatable = false, nullable = false)
-    @JdbcTypeCode(Types.VARCHAR)
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(updatable = false, nullable = false)
     private UUID addressId;
+
+    @Column(nullable = false)
     private String street;
+    @Column(nullable = false)
     private String city;
+    @Column(nullable = false)
     private String postalCode;
+    @Column(nullable = false)
     private String country;
 
     @Version

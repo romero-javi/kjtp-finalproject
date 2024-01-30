@@ -1,12 +1,17 @@
 package com.javi.kjtpfinalproject.controllers;
 
-import com.javi.kjtpfinalproject.dto.AddressDTO;
-import com.javi.kjtpfinalproject.dto.CheckoutResponseDTO;
-import com.javi.kjtpfinalproject.dto.UserDTO;
-import com.javi.kjtpfinalproject.entities.PaymentMethod;
+import com.javi.kjtpfinalproject.dto.address.AddressDTO;
+import com.javi.kjtpfinalproject.dto.checkout.CheckoutDetailRequestDTO;
+import com.javi.kjtpfinalproject.dto.checkout.CheckoutAddressDTO;
+import com.javi.kjtpfinalproject.dto.checkout.CheckoutResponseDTO;
+import com.javi.kjtpfinalproject.dto.order.OrderDTO;
+import com.javi.kjtpfinalproject.dto.payment.CheckoutPaymentMethodRequestDTO;
+import com.javi.kjtpfinalproject.dto.user.UserDTO;
 import com.javi.kjtpfinalproject.services.UserService;
+import com.javi.kjtpfinalproject.shared.constants.ControllerPaths;
 import com.javi.kjtpfinalproject.shared.utils.JwtUtils;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotEmpty;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,59 +25,63 @@ import java.util.Map;
 @RestController
 @RequiredArgsConstructor
 public class UserController {
-    public static final String USERS_PATH = "/api/v1/users";
-    public static final String USERS_ID_PATH = USERS_PATH + "/{userId}";
-    public static final String ACTUAL_USER_PATH = USERS_PATH + "/me";
-    public static final String ACTUAL_USER_ADDRESSES_PATH = ACTUAL_USER_PATH + "/addresses";
-    public static final String ACTUAL_USER_ADDRESSES_ID_PATH = ACTUAL_USER_ADDRESSES_PATH + "/{addressId}";
-    public static final String ACTUAL_USER_PAYMENT_METHODS_PATH = ACTUAL_USER_PATH + "/payment-methods";
-    public static final String ACTUAL_USER_PAYMENT_METHODS_ID_PATH = ACTUAL_USER_PAYMENT_METHODS_PATH + "/{paymentMethodId}";
-    public static final String ACTUAL_USER_CHECKOUT_PATH = ACTUAL_USER_PATH + "/checkout";
-
     private final UserService userService;
 
+    /*
+        Method for admin to see all users
+     */
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping(USERS_PATH)
+    @GetMapping(ControllerPaths.USERS)
     public ResponseEntity<List<UserDTO>> findAllUsers() {
-        return ResponseEntity.ok(userService.findAllUsers());
+        return ResponseEntity.ok(
+                userService.findAllUsers()
+        );
     }
 
+    /*
+        Method for admin to find user by id
+     */
     @PreAuthorize("hasRole('ADMIN')")
-    @GetMapping(USERS_ID_PATH)
-    public ResponseEntity<UserDTO> findUserById(@PathVariable("userId") String customerId) {
-        return ResponseEntity.ok(userService.findUserById(customerId));
+    @GetMapping(ControllerPaths.USER_ID)
+    public ResponseEntity<UserDTO> findUserById(@PathVariable("userId") String userId) {
+        return ResponseEntity.ok(
+                userService.findUserById(userId)
+        );
     }
 
+
+    /*
+        Method for admin to delete a user by id
+     */
     @PreAuthorize("hasRole('ADMIN')")
-    @DeleteMapping(USERS_ID_PATH)
+    @DeleteMapping(ControllerPaths.USER_ID)
     public ResponseEntity<Void> deleteUserById(@PathVariable("userId") String userId) {
         userService.deleteUserById(userId);
         return ResponseEntity.noContent().build();
     }
 
     /*
-        Method for users to see their profile
+        Method for users to see their own profile
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @GetMapping(ACTUAL_USER_PATH )
-    public ResponseEntity<UserDTO> findActualUser(@RequestHeader("Authorization") String authHeader) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
+    @GetMapping(ControllerPaths.CURRENT_USER)
+    public ResponseEntity<UserDTO> findCurrentUser(@RequestHeader("Authorization") String authHeader) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
+        return ResponseEntity.ok(
+                userService.findUserById(userId)
         );
-        return ResponseEntity.ok(userService.findUserById(userId));
     }
 
     /*
-        Method for users to delete their profile and records
+        Method for users to delete their own profile
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @DeleteMapping(ACTUAL_USER_PATH)
-    public ResponseEntity<Void> deleteActualUser(@RequestHeader("Authorization") String authHeader) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+    @DeleteMapping(ControllerPaths.CURRENT_USER)
+    public ResponseEntity<Void> deleteCurrentUser(@RequestHeader("Authorization") String authHeader) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
-        userService.deleteUserById(userId);
+        userService.findUserById(userId);
         return ResponseEntity.noContent().build();
     }
 
@@ -81,16 +90,13 @@ public class UserController {
      */
 
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @GetMapping(ACTUAL_USER_ADDRESSES_PATH)
+    @GetMapping(ControllerPaths.CURRENT_USER_ADDRESSES)
     public ResponseEntity<Map<String, Object>> findUserAddresses(@RequestHeader("Authorization") String authHeader) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
         Map<String, Object> response = new LinkedHashMap<>();
-        List<AddressDTO> addresses = userService.findUserAddresses(userId);
+        response.put("addresses", userService.findUserAddresses(userId));
 
-        response.put("addresses", addresses);
         return ResponseEntity.ok(response);
     }
 
@@ -98,25 +104,26 @@ public class UserController {
         Method for users to add an address to their profile
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @PostMapping(ACTUAL_USER_ADDRESSES_PATH)
-    public ResponseEntity<UserDTO> saveUserAddress(@RequestHeader("Authorization") String authHeader, @RequestBody @Valid AddressDTO newAddress) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+    @PostMapping(ControllerPaths.CURRENT_USER_ADDRESSES)
+    public ResponseEntity<UserDTO> saveUserAddress(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid AddressDTO newAddress) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
-        UserDTO createdUser = userService.saveUserAddress(userId, newAddress);
-        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+        UserDTO newData = userService.saveUserAddress(userId, newAddress);
+        return new ResponseEntity<>(newData, HttpStatus.CREATED);
     }
 
     /*
         Method for users to delete an address from their profile
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @DeleteMapping(ACTUAL_USER_ADDRESSES_ID_PATH)
-    public ResponseEntity<Void> deleteUserAddress(@RequestHeader("Authorization") String authHeader, @PathVariable("addressId") String addressId) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+    @DeleteMapping(ControllerPaths.CURRENT_USER_ADDRESS_ID)
+    public ResponseEntity<Void> deleteUserAddress(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable("addressId") String addressId) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
         userService.deleteUserAddress(userId, addressId);
         return ResponseEntity.noContent().build();
     }
@@ -126,16 +133,13 @@ public class UserController {
      */
 
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @GetMapping(ACTUAL_USER_PAYMENT_METHODS_PATH)
+    @GetMapping(ControllerPaths.CURRENT_USER_PAYMENT_METHODS)
     public ResponseEntity<Map<String, Object>> findUserPaymentMethods(@RequestHeader("Authorization") String authHeader) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
         Map<String, Object> response = new LinkedHashMap<>();
-        List<PaymentMethod> paymentMethods = userService.findUserPaymentMethods(userId);
+        response.put("paymentMethods", userService.findUserPaymentMethods(userId));
 
-        response.put("paymentMethods", paymentMethods);
         return ResponseEntity.ok(response);
     }
 
@@ -143,11 +147,9 @@ public class UserController {
         Method for users to add payment method to their profile
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @PostMapping(ACTUAL_USER_PAYMENT_METHODS_PATH)
+    @PostMapping(ControllerPaths.CURRENT_USER_PAYMENT_METHODS)
         public ResponseEntity<UserDTO> saveUserPaymentMethod(@RequestHeader("Authorization") String authHeader, @RequestBody @Valid Map<String, Object> paymentMethod) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
         UserDTO updatedUser = userService.saveUserPaymentMethod(userId, paymentMethod);
         return new ResponseEntity<>(updatedUser, HttpStatus.CREATED);
@@ -157,11 +159,9 @@ public class UserController {
         Method for users to delete payment method from their profile
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @DeleteMapping(ACTUAL_USER_PAYMENT_METHODS_ID_PATH)
+    @DeleteMapping(ControllerPaths.CURRENT_USER_PAYMENT_METHOD_ID)
     public ResponseEntity<Void> deleteUserPaymentMethod(@RequestHeader("Authorization") String authHeader, @PathVariable("paymentMethodId") String paymentMethodId) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
         userService.deleteUserPaymentMethod(userId, paymentMethodId);
         return ResponseEntity.noContent().build();
@@ -171,24 +171,97 @@ public class UserController {
         Method for users to see their checkout
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @GetMapping(ACTUAL_USER_CHECKOUT_PATH)
+    @GetMapping(ControllerPaths.CURRENT_USER_CHECKOUT)
     public ResponseEntity<CheckoutResponseDTO> findUserCheckout(@RequestHeader("Authorization") String authHeader) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
-        return ResponseEntity.ok(userService.findUserCheckout(userId));
+        return ResponseEntity.ok(
+                userService.findUserCheckout(userId)
+        );
+    }
+
+    /*
+        Method for users to see their checkout
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @GetMapping(ControllerPaths.CURRENT_USER_ORDERS)
+    public ResponseEntity<List<OrderDTO>> findUserOrders(@RequestHeader("Authorization") String authHeader) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
+        return ResponseEntity.ok(
+                userService.findUserOrders(userId)
+        );
+    }
+
+    /*
+        Method for users to set an address to their checkout
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PostMapping(ControllerPaths.CURRENT_USER_CHECKOUT_ADDRESS)
+    public ResponseEntity<CheckoutResponseDTO> setUserCheckoutAddress(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid CheckoutAddressDTO checkoutAddressDTO) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
+        return ResponseEntity.ok(
+                userService.setUserCheckoutAddress(userId, checkoutAddressDTO)
+        );
+    }
+
+    /*
+        Method for users to set a payment method to their checkout
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PostMapping(ControllerPaths.CURRENT_USER_CHECKOUT_PAYMENT_METHOD)
+    public ResponseEntity<CheckoutResponseDTO> setUserCheckoutPaymentMethod(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid CheckoutPaymentMethodRequestDTO checkoutPaymentMethodRequestDTO) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
+        return ResponseEntity.ok(
+                userService.setUserCheckoutPaymentMethod(userId, checkoutPaymentMethodRequestDTO)
+        );
+    }
+
+    /*
+        Method for users to add a product to their checkout
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PostMapping(ControllerPaths.CURRENT_USER_CHECKOUT_PRODUCT)
+    public ResponseEntity<CheckoutResponseDTO> addProductToUserCheckout(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestBody @Valid CheckoutDetailRequestDTO checkoutDetailRequestDTO) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
+        return ResponseEntity.ok(
+                userService.addProductToUserCheckout(userId, checkoutDetailRequestDTO)
+        );
+    }
+
+    /*
+        Method for users to delete a product from their checkout
+     */
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @DeleteMapping(ControllerPaths.CURRENT_USER_CHECKOUT_PRODUCT_ID)
+    public ResponseEntity<CheckoutResponseDTO> deleteProductFromUserCheckout(
+            @RequestHeader("Authorization") String authHeader,
+            @PathVariable("productId")
+            @NotEmpty(message = "You must specify the UUID of the product to delete in the as a path variable")
+            String productId
+    ) {
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
+
+        userService.deleteProductFromUserCheckout(userId, productId);
+        return ResponseEntity.noContent().build();
     }
 
     /*
         Method for users to delete their checkout
      */
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    @DeleteMapping(ACTUAL_USER_CHECKOUT_PATH)
+    @DeleteMapping(ControllerPaths.CURRENT_USER_CHECKOUT)
     public ResponseEntity<Void> deleteUserCheckout(@RequestHeader("Authorization") String authHeader) {
-        String userId = JwtUtils.extractSubjectClaim(
-                JwtUtils.extractJwt(authHeader)
-        );
+        String userId = JwtUtils.getUserIdFromJwt(authHeader);
 
         userService.deleteUserCheckout(userId);
         return ResponseEntity.noContent().build();

@@ -1,12 +1,11 @@
 package com.javi.kjtpfinalproject.services;
 
-import com.javi.kjtpfinalproject.dto.ProductDTO;
+import com.javi.kjtpfinalproject.dto.product.ProductDTO;
 import com.javi.kjtpfinalproject.entities.Product;
-
-import java.util.List;
+import org.springframework.data.domain.Page;
 
 public interface ProductService {
-    List<ProductDTO> findAll();
+    Page<ProductDTO> findAll(Integer pageNumber, Integer pageSize);
     ProductDTO findById(String productID);
     ProductDTO addNewProduct(ProductDTO newProduct);
     void updateProductById(String productID, ProductDTO newData);

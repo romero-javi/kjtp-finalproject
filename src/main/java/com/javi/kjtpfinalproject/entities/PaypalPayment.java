@@ -6,8 +6,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.math.BigDecimal;
-
 @Getter
 @Setter
 @NoArgsConstructor
@@ -15,5 +13,4 @@ import java.math.BigDecimal;
 @DiscriminatorValue("paypal")
 public class PaypalPayment extends PaymentMethod {
     private String email;
-    private BigDecimal deposit;
 }

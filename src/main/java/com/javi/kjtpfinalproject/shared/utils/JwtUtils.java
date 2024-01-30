@@ -24,4 +24,10 @@ public class JwtUtils {
             return null;
         }
     }
+
+    public static String getUserIdFromJwt(String authHeader) {
+        return extractSubjectClaim(
+                extractJwt(authHeader)
+        );
+    }
 }

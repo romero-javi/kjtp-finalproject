@@ -8,7 +8,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Getter
@@ -22,8 +26,11 @@ import java.util.UUID;
 public class PaymentMethod extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
-    @Column(length = 36, updatable = false, nullable = false)
+    @Column(updatable = false, nullable = false)
     private UUID id;
+
+    @Column(nullable = false)
+    private BigDecimal deposit;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -32,4 +39,7 @@ public class PaymentMethod extends BaseEntity {
     @OneToOne(mappedBy = "selectedPaymentMethod")
     @JsonIgnore
     private Checkout checkout;
+    @OneToMany(mappedBy = "selectedPaymentMethod")
+    @JsonIgnore
+    private List<Order> orders;
 }
